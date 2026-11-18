@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Cerdas Komparasi SK & Data Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-gradient-to-br from-slate-100 to-indigo-50 min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div class="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-10 border border-slate-100">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Komparasi SK & Data Master</h1>
+            <p class="text-slate-500 text-sm mt-2">Sistem otomatis pencocokan NIM, Nama, & Jurusan mahasiswa.</p>
+        </div>
+        
+        <form id="uploadForm" class="space-y-5">
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">1. File Data Master (Excel / CSV)</label>
+                <input type="file" id="master_file" accept=".xlsx, .xls, .csv" required class="w-full text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white cursor-pointer"/>
+            </div>
+            
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">2. File SK Pembanding (PDF / Excel)</label>
+                <input type="file" id="sk_file" accept=".xlsx, .xls, .csv, .pdf" required class="w-full text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white cursor-pointer"/>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-2xl transition shadow-lg">
+                Proses & Bandingkan Data
+            </button>
+        </form>
+
+        <div id="resultBox" class="mt-8 hidden">
+            <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
+                <h3 class="font-bold text-base text-emerald-400 mb-4">Analisis Komparasi Selesai!</h3>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700">
+                    <div>
+                        <span class="block text-[11px] text-slate-400">Total Master</span>
+                        <span id="statMaster" class="text-base sm:text-lg font-bold text-white">0</span>
+                    </div>
+                    <div>
+                        <span class="block text-[11px] text-slate-400">Total SK</span>
+                        <span id="statSK" class="text-base sm:text-lg font-bold text-indigo-400">0</span>
+                    </div>
+                    <div>
+                        <span class="block text-[11px] text-slate-400">Masuk SK</span>
+                        <span id="statMatched" class="text-base sm:text-lg font-bold text-emerald-400">0</span>
+                    </div>
+                    <div>
+                        <span class="block text-[11px] text-slate-400">Belum SK</span>
+                        <span id="statMissing" class="text-base sm:text-lg font-bold text-rose-400">0</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <a id="downloadMissingBtn" href="#" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold py-3 px-4 rounded-xl text-center transition">
+                            📥 Download Belum Masuk SK
+                        </a>
+                        <a id="downloadMatchedBtn" href="#" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-3 px-4 rounded-xl text-center transition">
+                            📥 Download Tercantum SK
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('master_file', document.getElementById('master_file').files[0]);
+            formData.append('sk_file', document.getElementById('sk_file').files[0]);
+
+            const btn = document.getElementById('submitBtn');
+            btn.textContent = "Memproses Data...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/compare', { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('resultBox').classList.remove('hidden');
+                    document.getElementById('statMaster').textContent = result.total_master;
+                    document.getElementById('statSK').textContent = result.total_sk;       // <-- Menampilkan Total SK
+                    document.getElementById('statMatched').textContent = result.total_in_sk;
+                    document.getElementById('statMissing').textContent = result.total_missing;
+                    
+                    document.getElementById('downloadMissingBtn').href = result.download_missing;
+                    document.getElementById('downloadMatchedBtn').href = result.download_matched;
+                } else {
+                    alert('Gagal: ' + (result.detail || 'Terjadi kesalahan.'));
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi ke server.');
+            } finally {
+                btn.textContent = "Proses & Bandingkan Data";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
